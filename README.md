@@ -2,9 +2,7 @@
 
 **A comprehensive security reference distilled from 150+ sources to help LLMs generate safer code**
 
-[Landing anmd github-pages website](https://arcanum-sec.github.io/sec-context/)
-
-## The Problem
+[Landing and github-pages website](https://arcanum-sec.github.io/sec-context/)
 
 AI coding assistants are everywhere. **97% of developers** now use AI tools, and organizations report **40%+ of their codebase** is AI-generated. But there's a critical gap: AI models consistently reproduce the same dangerous security anti-patterns, with studies showing:
 
@@ -35,6 +33,20 @@ Deep-dive coverage of the **7 highest-priority vulnerabilities** with:
 - Edge cases frequently overlooked
 - Complete mitigation strategies with trade-offs
 - Why AI models generate these specific vulnerabilities
+
+### Modular Pattern Files
+Individual pattern files organized into two directories:
+
+**anti-patterns-breadth/** (61 files)
+- Each security anti-pattern as a standalone markdown file
+- Self-contained with prompts, BAD/GOOD examples, and guidance
+- Quick reference table and navigation included
+- Examples: `sql-injection.md`, `hardcoded-passwords-api-keys.md`, `reflected-xss.md`
+
+**anti-patterns-depth/** (7 files)
+- In-depth coverage of each critical vulnerability
+- Comprehensive examples, edge cases, and testing strategies
+- Examples: `hardcoded-secrets-credential-management.md`, `cross-site-scripting-xss.md`
 
 ---
 
@@ -89,11 +101,28 @@ Another ideal use case: deploy a dedicated skill in claude code that reviews AI-
 - Returns specific vulnerabilities found with remediation steps
 - Works as a guardrail between AI code generation and production
 
+### Option 5: Modular Pattern Files
+Use individual pattern files for targeted security guidance:
+
+**Usage examples:**
+- Working on SQL queries? Load `anti-patterns-breadth/sql-injection.md`
+- Building authentication? Load `anti-patterns-depth/hardcoded-secrets-credential-management.md`
+- API development? Load `anti-patterns-breadth/command-injection.md` and `anti-patterns-breadth/broken-object-level-authorization.md`
+- Deploying an agent? Configure it to retrieve relevant patterns based on code analysis
+
+**Workflow for agents:**
+1. Analyze code to identify security-relevant areas (user input, database queries, authentication, etc.)
+2. Retrieve corresponding pattern files from the modular directories
+3. Apply pattern checks to identified code sections
+4. Return targeted findings with specific remediation guidance
+
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────┐
 │ AI Code Gen     │────>│ Security Review Agent │────>│ Reviewed    │
-│ (Copilot, etc.) │     │ + Anti-Patterns Guide │     │ Code Output │
-└─────────────────┘     └──────────────────────┘     └─────────────┘
+│ (Copilot, etc.) │     │ + Modular Pattern     │     │ Code Output │
+└─────────────────┘     │ Files (Retrieved     │     └─────────────┘
+                        │ based on context)    │
+                        └──────────────────────┘
 ```
 
 ---
@@ -120,7 +149,9 @@ This guide synthesizes findings from **150+ individual sources** across 6 primar
 
 ```
 ├── ANTI_PATTERNS_BREADTH.md   # Full coverage, 25+ patterns
-├── ANTI_PATTERNS_DEPTH.md     # Deep dive, 7 critical patterns for now
+├── ANTI_PATTERNS_DEPTH.md     # Deep dive, 7 critical patterns
+├── anti-patterns-breadth/     # Individual pattern files (61 files)
+└── anti-patterns-depth/       # In-depth individual patterns (7 files)
 ```
 
 ---
@@ -128,7 +159,11 @@ This guide synthesizes findings from **150+ individual sources** across 6 primar
 ## Get Started
 
 1. **Grab the files**
-2. **Choose your approach** based on your context window and use case
+2. **Choose your approach** based on your context window and use case:
+   - **Large context models** (128K+): Use comprehensive ANTI_PATTERNS files
+   - **Smaller context models** or **targeted tasks**: Use modular pattern files
+   - **Agent deployments**: Configure to retrieve modular patterns based on code context
+   - **Learning**: Explore individual patterns to understand specific vulnerabilities
 3. **Integrate** into your AI coding workflow as system prompt, RAG reference, or review agent
 4. **Generate safer code**
 
