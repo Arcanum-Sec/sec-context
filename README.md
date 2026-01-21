@@ -82,16 +82,37 @@ The ideal use case: deploy a dedicated agent that reviews AI-generated code agai
 - Returns specific vulnerabilities found with remediation steps
 - Works as a guardrail between AI code generation and production
 
-### Option 4: Standalone Security Review Skill - Claude Code (Recommended)
-Another ideal use case: deploy a dedicated skill in claude code that reviews AI-generated code against these patterns. This agent:
-- Takes code as input
+### Option 4: Claude Code Security Review Skill (Recommended)
+Deploy a dedicated skill in Claude Code that reviews AI-generated code against these patterns:
+- Takes code as input (recent changes, specific files, or directories)
 - Checks against all 25+ anti-patterns
 - Returns specific vulnerabilities found with remediation steps
 - Works as a guardrail between AI code generation and production
 
+**Quick Install:**
+```bash
+mkdir -p .claude/skills .claude/security
+curl -sL https://raw.githubusercontent.com/Arcanum-Sec/sec-context/main/.claude/skills/security-review.md -o .claude/skills/security-review.md
+curl -sL https://raw.githubusercontent.com/Arcanum-Sec/sec-context/main/ANTI_PATTERNS_BREADTH.md -o .claude/security/ANTI_PATTERNS_BREADTH.md
+curl -sL https://raw.githubusercontent.com/Arcanum-Sec/sec-context/main/ANTI_PATTERNS_DEPTH.md -o .claude/security/ANTI_PATTERNS_DEPTH.md
+```
+
+**Usage:**
+```bash
+/security-review                      # Quick review of recent changes (BREADTH)
+/security-review path/to/file.ts      # Review specific file
+/security-review --deep               # Deep audit using DEPTH document
+/security-review --deep src/auth/     # Deep audit of auth code
+```
+
+| Mode | Document | Patterns | Best For |
+|------|----------|----------|----------|
+| Default | BREADTH | 25+ | General reviews, PRs |
+| `--deep` | DEPTH | 7 critical | Auth, crypto, payments, pre-launch |
+
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────┐
-│ AI Code Gen     │────>│ Security Review Agent │────>│ Reviewed    │
+│ AI Code Gen     │────>│ Security Review Skill │────>│ Reviewed    │
 │ (Copilot, etc.) │     │ + Anti-Patterns Guide │     │ Code Output │
 └─────────────────┘     └──────────────────────┘     └─────────────┘
 ```
@@ -119,8 +140,11 @@ This guide synthesizes findings from **150+ individual sources** across 6 primar
 ## File Locations
 
 ```
-├── ANTI_PATTERNS_BREADTH.md   # Full coverage, 25+ patterns
-├── ANTI_PATTERNS_DEPTH.md     # Deep dive, 7 critical patterns for now
+├── ANTI_PATTERNS_BREADTH.md        # Full coverage, 25+ patterns
+├── ANTI_PATTERNS_DEPTH.md          # Deep dive, 7 critical patterns
+└── .claude/
+    └── skills/
+        └── security-review.md      # Claude Code skill definition
 ```
 
 ---
