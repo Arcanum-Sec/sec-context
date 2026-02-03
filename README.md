@@ -142,4 +142,20 @@ Found a pattern we missed? Have a better example? PRs are welcome =)
 
 ---
 
+## Codex Skill (Installable Use)
+
+This repo includes a Codex skill at `.codex/skills/sec-context`.
+
+### Install (manual copy)
+1. Copy the skill folder into your Codex skills directory:
+   - Example: `$CODEX_HOME/skills/sec-context`
+2. The skill bundles its references under:
+   - `.codex/skills/sec-context/references/ANTI_PATTERNS_BREADTH.md`
+   - `.codex/skills/sec-context/references/ANTI_PATTERNS_DEPTH.md`
+
+### Verify
+Open `SKILL.md` to confirm the frontmatter and references resolve as expected in your environment.
+
+---
+
 *Built by synthesizing 150+ sources across academic papers, CVE databases, security blogs, and developer communities. Because AI shouldn't keep making the same security mistakes.*
