@@ -136,6 +136,27 @@ The goal isn't to replace human security review—it's to catch the obvious, wel
 
 ---
 
+## Install
+
+### Option 1: Clone with Git
+```
+git clone https://github.com/arcanum-sec/sec-context.git
+cd sec-context
+```
+
+### Option 2: Download ZIP
+Download the repository ZIP from GitHub, extract it, and open the folder.
+
+### Files You'll Use
+```
+ANTI_PATTERNS_BREADTH.md
+ANTI_PATTERNS_DEPTH.md
+```
+
+If you only want the content, those two files are all you need.
+
+---
+
 ## Contributing
 
 Found a pattern we missed? Have a better example? PRs are welcome =)
@@ -145,6 +166,13 @@ Found a pattern we missed? Have a better example? PRs are welcome =)
 ## Codex Skill (Installable Use)
 
 This repo includes a Codex skill at `.codex/skills/sec-context`.
+
+### Install via Codex (from GitHub)
+Use the built-in `$skill-installer` skill and point it at this repo and path:
+```
+$skill-installer install the sec-context skill from https://github.com/arcanum-sec/sec-context/tree/main/.codex/skills/sec-context
+```
+Restart Codex after installation so the new skill is picked up.
 
 ### Install (manual copy)
 1. Copy the skill folder into your Codex skills directory:
