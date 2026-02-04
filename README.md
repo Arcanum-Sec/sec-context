@@ -136,9 +136,86 @@ The goal isn't to replace human security review—it's to catch the obvious, wel
 
 ---
 
+## Install
+
+### Option 1: Clone with Git
+```
+git clone https://github.com/arcanum-sec/sec-context.git
+cd sec-context
+```
+
+### Option 2: Download ZIP
+Download the repository ZIP from GitHub, extract it, and open the folder.
+
+### Files You'll Use
+```
+ANTI_PATTERNS_BREADTH.md
+ANTI_PATTERNS_DEPTH.md
+```
+
+If you only want the content, those two files are all you need.
+
+---
+
 ## Contributing
 
 Found a pattern we missed? Have a better example? PRs are welcome =)
+
+---
+
+## Claude Skill (Claude Code)
+
+This repo includes a Claude skill at `.claude/skills/security-review-swarm`.
+
+### What it does
+`security-review-swarm` orchestrates parallel security-review agents to scan code for the anti-patterns in this repo. It supports a fast single-agent scan and deeper multi-agent reviews.
+
+### Usage
+```
+/security-review                  # quick breadth review
+/security-review src/             # review a specific path
+/security-review --deep           # deep single-agent audit
+/security-review --full           # full swarm: parallel specialists
+```
+
+### Review modes
+- **Quick (default):** one agent using breadth patterns (25+).
+- **Deep (`--deep`):** one agent using depth patterns (7 critical).
+- **Full (`--full`):** seven parallel specialists (secrets, injection, XSS, auth, crypto, input validation, dependencies).
+
+### Auto-escalation rules
+The swarm skill automatically switches to **deep** or **full** review when:
+- Paths include auth/session/payment/crypto-related folders.
+- File contents include tokens/secrets/JWT-related keywords.
+- The scope is large (50+ files) or the user requests a comprehensive audit.
+
+### Install
+Copy `.claude/skills/security-review-swarm` into your Claude Code skills directory and enable it there. The skill references `references/ANTI_PATTERNS_BREADTH.md` and `references/ANTI_PATTERNS_DEPTH.md` bundled in the same folder.
+
+## Codex Skill (CLI)
+
+### Install (from GitHub)
+Use the Codex installer script:
+```bash
+scripts/install-skill-from-github.py --repo gusfraser/sec-context --path .codex/skills/sec-context
+```
+
+To install from the upstream repo instead:
+```bash
+scripts/install-skill-from-github.py --repo Arcanum-Sec/sec-context --path .codex/skills/sec-context
+```
+
+Restart Codex after installation so the new skill is picked up.
+
+### Install (manual copy)
+1. Copy the skill folder into your Codex skills directory:
+   - Example: `$CODEX_HOME/skills/sec-context`
+2. The skill bundles its references under:
+   - `.codex/skills/sec-context/references/ANTI_PATTERNS_BREADTH.md`
+   - `.codex/skills/sec-context/references/ANTI_PATTERNS_DEPTH.md`
+
+### Verify
+Open `SKILL.md` to confirm the frontmatter and references resolve as expected in your environment.
 
 ---
 
