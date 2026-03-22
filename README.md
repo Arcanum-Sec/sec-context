@@ -96,6 +96,63 @@ Another ideal use case: deploy a dedicated skill in claude code that reviews AI-
 └─────────────────┘     └──────────────────────┘     └─────────────┘
 ```
 
+### Option 5: Modular Agent Skill (Recommended for Token Efficiency)
+
+The `SKILL.md` + `references/` structure provides the same content as the monolithic files, split by security surface so agents load only what they need. This reduces token cost from ~165K to ~2-8K per task.
+
+**Install as a skill:**
+```bash
+# Clone and use directly as an agent skill
+git clone https://github.com/arcanum-sec/sec-context.git ~/.agents/skills/sec-context
+
+# Or symlink from an existing clone
+ln -s /path/to/sec-context ~/.agents/skills/sec-context
+```
+
+**How it works:**
+1. The agent loads `SKILL.md` (~200 lines) -- contains the routing table, quick reference, and security checklist.
+2. Based on the code being reviewed, the agent loads only the matching surface file(s) from `references/`.
+3. Each surface has a `breadth` file (concise patterns) and optionally a `depth` file (full examples, edge cases, common mistakes).
+
+**Token cost comparison:**
+
+| Scenario | Monolithic | Modular |
+|----------|-----------|---------|
+| Full load | ~165K tokens | ~165K (originals still available) |
+| SQL-related task | ~165K | **~2.5K** (SKILL.md + injection-breadth) |
+| SQL thorough review | ~165K | **~4K** (+ injection-depth) |
+| Auth + XSS task | ~165K | **~4K** (SKILL.md + 2 breadth files) |
+
+**Integrate into an existing skill:**
+```markdown
+## Security Anti-Pattern References
+
+When deeper anti-pattern coverage is needed, load from sec-context:
+1. Read the routing table in the sec-context SKILL.md
+2. Load only the matching surface breadth/depth files from references/
+```
+
+**Directory structure:**
+```
+references/
+  secrets-breadth.md          # Secrets & credential patterns
+  secrets-depth.md            # Deep dive: edge cases, common mistakes
+  injection-breadth.md        # SQL, command, LDAP, NoSQL, template injection
+  injection-depth.md          # Deep dive
+  xss-breadth.md              # Cross-site scripting patterns
+  xss-depth.md                # Deep dive
+  authentication-breadth.md   # Auth, sessions, JWT, MFA, password reset
+  authentication-depth.md     # Deep dive
+  cryptography-breadth.md     # Encryption, hashing, key management
+  cryptography-depth.md       # Deep dive
+  input-validation-breadth.md # Validation, sanitization, regex
+  input-validation-depth.md   # Deep dive
+  config-deployment-breadth.md    # Debug mode, CORS, headers, defaults
+  dependencies-breadth.md         # Supply chain, slopsquatting, pinning
+  api-security-breadth.md         # IDOR, mass assignment, rate limiting
+  file-handling-breadth.md        # Uploads, traversal, symlinks, permissions
+```
+
 ---
 
 ## Research Sources
@@ -119,8 +176,26 @@ This guide synthesizes findings from **150+ individual sources** across 6 primar
 ## File Locations
 
 ```
-├── ANTI_PATTERNS_BREADTH.md   # Full coverage, 25+ patterns
-├── ANTI_PATTERNS_DEPTH.md     # Deep dive, 7 critical patterns for now
+├── SKILL.md                       # Agent skill entry point (router + quick ref + checklist)
+├── references/                    # Modular pattern files (load on demand)
+│   ├── secrets-breadth.md
+│   ├── secrets-depth.md
+│   ├── injection-breadth.md
+│   ├── injection-depth.md
+│   ├── xss-breadth.md
+│   ├── xss-depth.md
+│   ├── authentication-breadth.md
+│   ├── authentication-depth.md
+│   ├── cryptography-breadth.md
+│   ├── cryptography-depth.md
+│   ├── input-validation-breadth.md
+│   ├── input-validation-depth.md
+│   ├── config-deployment-breadth.md
+│   ├── dependencies-breadth.md
+│   ├── api-security-breadth.md
+│   └── file-handling-breadth.md
+├── ANTI_PATTERNS_BREADTH.md       # Original monolithic breadth file (~65K tokens)
+├── ANTI_PATTERNS_DEPTH.md         # Original monolithic depth file (~100K tokens)
 ```
 
 ---
