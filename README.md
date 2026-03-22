@@ -96,6 +96,137 @@ Another ideal use case: deploy a dedicated skill in claude code that reviews AI-
 └─────────────────┘     └──────────────────────┘     └─────────────┘
 ```
 
+### Option 5: Modular Agent Skill (Recommended for Token Efficiency)
+
+The `SKILL.md` + `references/` structure provides the same content as the monolithic files, split by security surface so agents load only what they need. This reduces token cost from ~165K to ~2-8K per task.
+
+**Install as a skill:**
+```bash
+# Clone and use directly as an agent skill
+git clone https://github.com/arcanum-sec/sec-context.git ~/.agents/skills/sec-context
+
+# Or symlink from an existing clone
+ln -s /path/to/sec-context ~/.agents/skills/sec-context
+```
+
+**How it works:**
+1. The agent loads `SKILL.md` (~200 lines) -- contains the routing table, quick reference, and security checklist.
+2. Based on the code being reviewed, the agent loads only the matching surface file(s) from `references/`.
+3. Each surface has a `breadth` file (concise patterns) and optionally a `depth` file (full examples, edge cases, common mistakes).
+
+**Token cost comparison:**
+
+| Scenario | Monolithic | Modular |
+|----------|-----------|---------|
+| Full load | ~165K tokens | ~165K (originals still available) |
+| SQL-related task | ~165K | **~2.5K** (SKILL.md + injection-breadth) |
+| SQL thorough review | ~165K | **~4K** (+ injection-depth) |
+| Auth + XSS task | ~165K | **~4K** (SKILL.md + 2 breadth files) |
+
+**Integrate into an existing skill:**
+```markdown
+## Security Anti-Pattern References
+
+When deeper anti-pattern coverage is needed, load from sec-context:
+1. Read the routing table in the sec-context SKILL.md
+2. Load only the matching surface breadth/depth files from references/
+```
+
+**Directory structure:**
+```
+references/
+  secrets-breadth.md          # Secrets & credential patterns
+  secrets-depth.md            # Deep dive: edge cases, common mistakes
+  injection-breadth.md        # SQL, command, LDAP, NoSQL, template injection
+  injection-depth.md          # Deep dive
+  xss-breadth.md              # Cross-site scripting patterns
+  xss-depth.md                # Deep dive
+  authentication-breadth.md   # Auth, sessions, JWT, MFA, password reset
+  authentication-depth.md     # Deep dive
+  cryptography-breadth.md     # Encryption, hashing, key management
+  cryptography-depth.md       # Deep dive
+  input-validation-breadth.md # Validation, sanitization, regex
+  input-validation-depth.md   # Deep dive
+  config-deployment-breadth.md    # Debug mode, CORS, headers, defaults
+  dependencies-breadth.md         # Supply chain, slopsquatting, pinning
+  api-security-breadth.md         # IDOR, mass assignment, rate limiting
+  file-handling-breadth.md        # Uploads, traversal, symlinks, permissions
+```
+
+---
+
+## Examples & Testing
+
+The `examples/` directory contains 5 deliberately vulnerable mockups and the security reviews produced by the modular skill. These serve as both a test suite and a demonstration of the skill's routing and progressive disclosure.
+
+### Test Mockups
+
+Each mockup is a self-contained file designed to trigger specific security surfaces:
+
+| # | File | Language | Planted Vulnerabilities | Surfaces Targeted |
+|---|------|----------|------------------------|-------------------|
+| 01 | `01-user-search-api.py` | Python (Flask) | SQL injection via f-strings, no input validation, no auth/rate-limiting, debug mode, `0.0.0.0` bind, SSN/salary exposure | Injection, Input Validation, API Security, Config & Deployment |
+| 02 | `02-auth-service.js` | Node.js (Express) | Hardcoded secrets (DB password, JWT key, API key), MD5 password hashing, `Math.random()` tokens, timing-vulnerable comparison, no rate limiting on login | Secrets, Authentication, Cryptography |
+| 03 | `03-profile-page.tsx` | React (TypeScript) | 3x `dangerouslySetInnerHTML` (reflected + stored XSS), client-side admin gate, IDOR via query param, open redirect, missing server-side auth | XSS, API Security, Input Validation |
+| 04 | `04-file-upload-server.go` | Go | Path traversal in uploads/downloads, unrestricted file types, predictable temp files, world-writable permissions, debug endpoints, open CORS, verbose errors | File Handling, Config & Deployment, API Security, Input Validation |
+| 05 | `05-infra-deploy.dockerfile` | Dockerfile + Bash + JSON | Unpinned `node:latest`, `COPY . .`, `USER root`, hardcoded tokens in ENV/script, `curl \| bash` install, typosquattable packages, `npm install` with no lockfile, `--privileged` | Dependencies, Config & Deployment, Secrets |
+
+### How to Run
+
+Install the skill (if not already done):
+```bash
+ln -s /path/to/sec-context ~/.agents/skills/sec-context
+```
+
+Then, in any compatible coding agent (OpenCode, Claude Code, Cursor, etc.), use a prompt like:
+
+```
+Using the sec-context skill, perform a security review of examples/mockups/01-user-search-api.py
+```
+
+The agent will:
+1. Load `SKILL.md` (~174 lines) to get the routing table and checklist.
+2. Identify which security surfaces the code triggers.
+3. Load only the matching reference files from `references/`.
+4. Produce a structured review with CWE mappings and remediation.
+
+Full results for all 5 tests are in `examples/results/`.
+
+### Results Summary
+
+All 5 tests were run on 2026-03-21/22 using the modular skill via OpenCode (claude-sonnet-4-20250514).
+
+| Test | Findings | Pattern Match | Surfaces Loaded | Depth Used | Rating |
+|------|----------|---------------|-----------------|------------|--------|
+| 01 (Python API) | 7 | 100% | 4 breadth | No | 4.5/5 |
+| 02 (Auth service) | 10 | 100% | 3 breadth | No | 4.5/5 |
+| 03 (React TSX) | 6 | 100% | 3 breadth | No | 4.4/5 |
+| 04 (Go file server) | 12 | 100% | 3 breadth + 1 depth | Yes | 8.5/10 |
+| 05 (Dockerfile/infra) | 18 | ~95% | 3 breadth | No | 4/5 |
+
+**Total: 53 findings across 5 reviews. Zero false surfaces loaded.**
+
+### What Worked Well
+
+- **Routing accuracy** -- Trigger keywords in the routing table correctly identified relevant surfaces in every test. No irrelevant files were loaded.
+- **BAD/GOOD pattern pairs** -- Every vulnerability found had a near-exact match to a BAD example in the breadth files. This was the single most valuable feature for producing actionable remediation.
+- **Progressive disclosure** -- Breadth-only was sufficient in 4 of 5 tests. Only test 04 loaded a depth file (`input-validation-depth.md`) for cross-surface path traversal overlap.
+- **CWE mapping** -- Pre-mapped CWEs in the reference files eliminated lookup time and ensured accurate classification in all reviews.
+- **Token efficiency** -- Each review loaded 3-4 reference files (~1,200-3,500 lines) instead of the full ~14,000+ lines in the monolithic files.
+- **Checklist as safety net** -- The Security Surface Identification Checklist in SKILL.md caught surfaces that keyword matching alone might have missed.
+
+### Known Gaps and Improvement Areas
+
+- **No language-specific guidance** -- Pseudocode patterns require manual translation to Python/JS/Go/etc. Language-specific function mappings (e.g., "use `crypto.timingSafeEqual()` in Node.js") would speed up remediation.
+- **"2-3 surfaces" guideline slightly restrictive** -- Tests 01 and 04 needed 4 surfaces. A better guideline: "2-3 typically, more if clearly warranted."
+- **Missing container/Dockerfile patterns** -- No dedicated surface for `USER root`, `--privileged`, `COPY . .`, unpinned base images, or mutable tags. Test 05 scored lowest partly due to this gap.
+- **Missing `postinstall`/lifecycle script pattern** -- Dependencies breadth covers typosquatting but not npm lifecycle script RCE vectors.
+- **Absence-of-code not a trigger** -- When auth code is entirely missing, none of the auth trigger keywords match. Negative signals ("no auth middleware found") would help.
+- **No composite vulnerability scoring** -- No guidance on how compound vulnerabilities (e.g., SQL injection + no auth + debug mode) escalate aggregate risk.
+- **Cross-surface overlaps not signposted** -- Rate limiting appears in both API Security and Input Validation without a cross-reference note.
+- **CWE-601 (Open Redirect) missing** from the Quick Reference Table in SKILL.md.
+- **JSON injection gap** -- XSS breadth covers HTML output encoding but not backend JSON construction via string interpolation.
+
 ---
 
 ## Research Sources
@@ -119,8 +250,29 @@ This guide synthesizes findings from **150+ individual sources** across 6 primar
 ## File Locations
 
 ```
-├── ANTI_PATTERNS_BREADTH.md   # Full coverage, 25+ patterns
-├── ANTI_PATTERNS_DEPTH.md     # Deep dive, 7 critical patterns for now
+├── SKILL.md                       # Agent skill entry point (router + quick ref + checklist)
+├── references/                    # Modular pattern files (load on demand)
+│   ├── secrets-breadth.md
+│   ├── secrets-depth.md
+│   ├── injection-breadth.md
+│   ├── injection-depth.md
+│   ├── xss-breadth.md
+│   ├── xss-depth.md
+│   ├── authentication-breadth.md
+│   ├── authentication-depth.md
+│   ├── cryptography-breadth.md
+│   ├── cryptography-depth.md
+│   ├── input-validation-breadth.md
+│   ├── input-validation-depth.md
+│   ├── config-deployment-breadth.md
+│   ├── dependencies-breadth.md
+│   ├── api-security-breadth.md
+│   └── file-handling-breadth.md
+├── examples/                      # Test mockups and review results
+│   ├── mockups/                   # 5 deliberately vulnerable files
+│   └── results/                   # Security reviews produced by the skill
+├── ANTI_PATTERNS_BREADTH.md       # Original monolithic breadth file (~65K tokens)
+├── ANTI_PATTERNS_DEPTH.md         # Original monolithic depth file (~100K tokens)
 ```
 
 ---
